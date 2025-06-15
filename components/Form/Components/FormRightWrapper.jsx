@@ -2,29 +2,41 @@
 
 import styled from 'styled-components';
 import { FormState } from '../Form';
-import { useState, useContext } from 'react';
+import { useState, useContext, useEffect } from 'react';
 import { toast } from 'react-toastify';
 import ClipLoader from 'react-spinners/ClipLoader';
 
 const projectId = process.env.NEXT_PUBLIC_IPFS_ID;
 const projectSecret = process.env.NEXT_PUBLIC_IPFS_KEY;
+
 const auth = 'Basic ' + Buffer.from(projectId + ':' + projectSecret).toString('base64');
 
-// ✅ Fixed IPFS endpoint here
 const uploadToIPFS = async (file) => {
-  const formData = new FormData();
-  formData.append('file', file);
+  try {
+    const formData = new FormData();
+    formData.append('file', file);
 
-  const response = await fetch('https://ipfs.infura.io:5001/api/v0/add', {
-    method: 'POST',
-    body: formData,
-    headers: {
-      Authorization: auth,
-    },
-  });
+    const response = await fetch('https://ipfs.infura.io:5001/api/v0/add', {
+      method: 'POST',
+      body: formData,
+      headers: {
+        Authorization: auth,
+      },
+    });
 
-  const data = await response.json();
-  return data.Hash;
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const data = await response.json();
+    if (!data.Hash) {
+      throw new Error('No hash received from IPFS');
+    }
+    return data.Hash;
+  } catch (error) {
+    console.error('IPFS upload error:', error);
+    throw new Error('Failed to upload to IPFS: ' + error.message);
+  }
 };
 
 const FormRightWrapper = () => {
@@ -32,9 +44,44 @@ const FormRightWrapper = () => {
 
   const [uploadLoading, setUploadLoading] = useState(false);
   const [uploaded, setUploaded] = useState(false);
+  const [walletConnected, setWalletConnected] = useState(false);
+
+  // Check wallet connection on component mount
+  useEffect(() => {
+    const checkWalletConnection = async () => {
+      if (window.ethereum) {
+        try {
+          const accounts = await window.ethereum.request({ method: 'eth_accounts' });
+          setWalletConnected(accounts.length > 0);
+        } catch (error) {
+          console.error('Error checking wallet connection:', error);
+          setWalletConnected(false);
+        }
+      }
+    };
+    checkWalletConnection();
+  }, []);
 
   const uploadFiles = async (e) => {
     e.preventDefault();
+
+    // Check if wallet is connected
+    if (!walletConnected) {
+      toast.error('Please connect your wallet first');
+      return;
+    }
+
+    // Validate form data
+    if (!Handler.image) {
+      toast.error('Please select an image first');
+      return;
+    }
+
+    if (Handler.form.story === '') {
+      toast.error('Please add a story');
+      return;
+    }
+
     setUploadLoading(true);
 
     try {
@@ -53,7 +100,8 @@ const FormRightWrapper = () => {
       Handler.setUploaded(true);
       toast.success('Files Uploaded Successfully');
     } catch (error) {
-      toast.error('Error uploading files to IPFS');
+      console.error('Upload error:', error);
+      toast.error(error.message || 'Error uploading files to IPFS');
     }
 
     setUploadLoading(false);
@@ -98,7 +146,11 @@ const FormRightWrapper = () => {
         />
       </FormInput>
 
-      {uploadLoading ? (
+      {!walletConnected ? (
+        <Button style={{ backgroundColor: '#ff4444' }} disabled>
+          Please Connect Wallet First
+        </Button>
+      ) : uploadLoading ? (
         <Button disabled>
           <ClipLoader size={20} color="#ffffff" />
         </Button>
