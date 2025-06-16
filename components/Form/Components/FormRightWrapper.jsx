@@ -6,10 +6,12 @@ import { useState, useContext, useEffect } from 'react';
 import { toast } from 'react-toastify';
 import ClipLoader from 'react-spinners/ClipLoader';
 
+// IPFS configuration
 const projectId = process.env.NEXT_PUBLIC_IPFS_ID;
 const projectSecret = process.env.NEXT_PUBLIC_IPFS_KEY;
 
-const auth = 'Basic ' + Buffer.from(projectId + ':' + projectSecret).toString('base64');
+// Create auth string using btoa for base64 encoding
+const auth = 'Basic ' + btoa(projectId + ':' + projectSecret);
 
 const uploadToIPFS = async (file) => {
   try {
@@ -25,7 +27,8 @@ const uploadToIPFS = async (file) => {
     });
 
     if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
+      const errorData = await response.json();
+      throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
     }
 
     const data = await response.json();
@@ -41,15 +44,15 @@ const uploadToIPFS = async (file) => {
 
 const FormRightWrapper = () => {
   const Handler = useContext(FormState);
-
   const [uploadLoading, setUploadLoading] = useState(false);
   const [uploaded, setUploaded] = useState(false);
   const [walletConnected, setWalletConnected] = useState(false);
+  const [mounted, setMounted] = useState(false);
 
-  // Check wallet connection on component mount
   useEffect(() => {
+    setMounted(true);
     const checkWalletConnection = async () => {
-      if (window.ethereum) {
+      if (typeof window !== 'undefined' && window.ethereum) {
         try {
           const accounts = await window.ethereum.request({ method: 'eth_accounts' });
           setWalletConnected(accounts.length > 0);
@@ -65,13 +68,11 @@ const FormRightWrapper = () => {
   const uploadFiles = async (e) => {
     e.preventDefault();
 
-    // Check if wallet is connected
     if (!walletConnected) {
       toast.error('Please connect your wallet first');
       return;
     }
 
-    // Validate form data
     if (!Handler.image) {
       toast.error('Please select an image first');
       return;
@@ -107,6 +108,10 @@ const FormRightWrapper = () => {
     setUploadLoading(false);
   };
 
+  if (!mounted) {
+    return null; // Prevent hydration mismatch
+  }
+
   return (
     <FormRight>
       <FormInput>
@@ -119,6 +124,7 @@ const FormRightWrapper = () => {
               name="requiredAmount"
               type="number"
               placeholder="Required Amount"
+              suppressHydrationWarning
             />
           </RowFirstInput>
           <RowSecondInput>
@@ -127,6 +133,7 @@ const FormRightWrapper = () => {
               onChange={Handler.FormHandler}
               value={Handler.form.category}
               name="category"
+              suppressHydrationWarning
             >
               <option>Education</option>
               <option>Health</option>
@@ -143,6 +150,7 @@ const FormRightWrapper = () => {
           onChange={Handler.ImageHandler}
           type="file"
           accept="image/*"
+          suppressHydrationWarning
         />
       </FormInput>
 
