@@ -13,11 +13,26 @@ module.exports = {
     solidity: "0.8.28",
     defaultNetwork: "hardhat",
     networks: {
-        hardhat: {},
+        hardhat: {
+            chainId: 31337, // ✅ Add this to stay consistent
+        },
         localhost: {
             url: "http://127.0.0.1:8545",
-            chainId: 1337,
-            accounts: [privatekey]
-        }
-    }
+            chainId: 31337, // ✅ Fix this line
+            accounts: [privatekey],
+        },
+    },
 };
+
+// module.exports = {
+//     solidity: "0.8.28",
+//     defaultNetwork: "hardhat",
+//     networks: {
+//         hardhat: {},
+//         localhost: {
+//             url: "http://127.0.0.1:8545",
+//             chainId: 1337,
+//             accounts: [privatekey]
+//         }
+//     }
+// };

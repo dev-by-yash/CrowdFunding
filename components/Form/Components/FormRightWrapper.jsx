@@ -6,39 +6,32 @@ import { useState, useContext, useEffect } from 'react';
 import { toast } from 'react-toastify';
 import ClipLoader from 'react-spinners/ClipLoader';
 
-// IPFS configuration
-const projectId = process.env.NEXT_PUBLIC_IPFS_ID;
-const projectSecret = process.env.NEXT_PUBLIC_IPFS_KEY;
-
-// Create auth string using btoa for base64 encoding
-const auth = 'Basic ' + btoa(projectId + ':' + projectSecret);
-
+// Upload to IPFS using Pinata
 const uploadToIPFS = async (file) => {
-  try {
-    const formData = new FormData();
-    formData.append('file', file);
+  const jwt = process.env.NEXT_PUBLIC_PINATA_JWT;
 
-    const response = await fetch('https://ipfs.infura.io:5001/api/v0/add', {
+  const formData = new FormData();
+  formData.append('file', file);
+
+  try {
+    const response = await fetch('https://api.pinata.cloud/pinning/pinFileToIPFS', {
       method: 'POST',
-      body: formData,
       headers: {
-        Authorization: auth,
+        Authorization: `Bearer ${jwt}`,
       },
+      body: formData,
     });
 
     if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+      const err = await response.json();
+      throw new Error(err.error || 'Failed to upload to Pinata');
     }
 
     const data = await response.json();
-    if (!data.Hash) {
-      throw new Error('No hash received from IPFS');
-    }
-    return data.Hash;
-  } catch (error) {
-    console.error('IPFS upload error:', error);
-    throw new Error('Failed to upload to IPFS: ' + error.message);
+    return data.IpfsHash;
+  } catch (err) {
+    console.error('Pinata upload error:', err);
+    throw new Error('Failed to upload to IPFS via Pinata: ' + err.message);
   }
 };
 
@@ -86,16 +79,12 @@ const FormRightWrapper = () => {
     setUploadLoading(true);
 
     try {
-      if (Handler.form.story !== '') {
-        const storyFile = new Blob([Handler.form.story], { type: 'text/plain' });
-        const hash = await uploadToIPFS(storyFile);
-        Handler.setStoryUrl(hash);
-      }
+      const storyFile = new Blob([Handler.form.story], { type: 'text/plain' });
+      const storyHash = await uploadToIPFS(storyFile);
+      Handler.setStoryUrl(storyHash);
 
-      if (Handler.image !== null) {
-        const hash = await uploadToIPFS(Handler.image);
-        Handler.setImageUrl(hash);
-      }
+      const imageHash = await uploadToIPFS(Handler.image);
+      Handler.setImageUrl(imageHash);
 
       setUploaded(true);
       Handler.setUploaded(true);
@@ -108,9 +97,13 @@ const FormRightWrapper = () => {
     setUploadLoading(false);
   };
 
-  if (!mounted) {
-    return null; // Prevent hydration mismatch
-  }
+  const handleSubmit = (e) => {
+    console.log("🟢 Form submitted");
+    console.log("⏳ Calling startCampaign...");
+    Handler.startCampaign(e);
+  };
+
+  if (!mounted) return null;
 
   return (
     <FormRight>
@@ -135,9 +128,9 @@ const FormRightWrapper = () => {
               name="category"
               suppressHydrationWarning
             >
-              <option>Education</option>
-              <option>Health</option>
-              <option>Animal</option>
+              <option value="education">Education</option>
+              <option value="health">Health</option>
+              <option value="animal">Animal</option>
             </Select>
           </RowSecondInput>
         </FormRow>
@@ -162,7 +155,7 @@ const FormRightWrapper = () => {
         <Button disabled>
           <ClipLoader size={20} color="#ffffff" />
         </Button>
-      ) : uploaded === false ? (
+      ) : !uploaded ? (
         <Button onClick={uploadFiles}>Upload Files to IPFS</Button>
       ) : (
         <Button style={{ cursor: 'no-drop' }} disabled>
@@ -170,14 +163,21 @@ const FormRightWrapper = () => {
         </Button>
       )}
 
-      <Button onClick={Handler.startCampaign}>Start Campaign</Button>
+      <Button onClick={handleSubmit}>Start Campaign</Button>
     </FormRight>
   );
 };
 
+export default FormRightWrapper;
+
 const FormRight = styled.div`
-  width: 45%;
+  width: 48%;
+
+  @media (max-width: 768px) {
+    width: 100%;
+  }
 `;
+
 
 const FormInput = styled.div`
   display: flex;
@@ -268,5 +268,3 @@ const Button = styled.button`
     opacity: 0.8;
   }
 `;
-
-export default FormRightWrapper;

@@ -11,37 +11,38 @@ contract CampaignFactory {
         address indexed owner,
         address campaignAddress,
         string imgURI,
-        uint indexed timestamp,
-        string indexed category
+        uint timestamp,
+        string category
     );
 
     function createCampaign(
-        string memory campaignTitle, 
-        uint requiredCampaignAmount, 
-        string memory imgURI, 
+        string memory campaignTitle,
+        uint requiredCampaignAmount,
+        string memory imgURI,
         string memory category,
-        string memory storyURI) public
-    {
-
+        string memory storyURI
+    ) public {
         Campaign newCampaign = new Campaign(
-            campaignTitle, requiredCampaignAmount, imgURI, storyURI, msg.sender);
-        
+            campaignTitle,
+            requiredCampaignAmount,
+            imgURI,
+            storyURI,
+            msg.sender
+        );
 
         deployedCampaigns.push(address(newCampaign));
 
         emit campaignCreated(
-            campaignTitle, 
-            requiredCampaignAmount, 
-            msg.sender, 
+            campaignTitle,
+            requiredCampaignAmount,
+            msg.sender,
             address(newCampaign),
             imgURI,
             block.timestamp,
             category
         );
-
     }
 }
-
 
 contract Campaign {
     string public title;
@@ -51,11 +52,15 @@ contract Campaign {
     address payable public owner;
     uint public receivedAmount;
 
-    event donated(address indexed donar, uint indexed amount, uint indexed timestamp);
+    event donated(
+        address indexed donar,
+        uint indexed amount,
+        uint indexed timestamp
+    );
 
     constructor(
-        string memory campaignTitle, 
-        uint requiredCampaignAmount, 
+        string memory campaignTitle,
+        uint requiredCampaignAmount,
         string memory imgURI,
         string memory storyURI,
         address campaignOwner

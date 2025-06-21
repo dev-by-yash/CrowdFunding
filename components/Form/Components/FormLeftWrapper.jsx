@@ -16,7 +16,6 @@ const FormLeftWrapper = () => {
           value={Handler.form.campaignTitle} 
           placeholder='Campaign Title' 
           name='campaignTitle'
-          suppressHydrationWarning
         />
       </FormInput>
       <FormInput>
@@ -26,7 +25,6 @@ const FormLeftWrapper = () => {
           value={Handler.form.story} 
           placeholder='Campaign Story' 
           name='story'
-          suppressHydrationWarning
         />
       </FormInput>
     </FormLeft>
@@ -34,7 +32,11 @@ const FormLeftWrapper = () => {
 };
 
 const FormLeft = styled.div`
-  width: 45%;
+  width: 48%;
+
+  @media (max-width: 768px) {
+    width: 100%;
+  }
 `;
 
 const FormInput = styled.div`
@@ -53,7 +55,6 @@ const Input = styled.input`
   border-radius: 8px;
   outline: none;
   font-size: large;
-  width: 100%;
 `;
 
 const TextArea = styled.textarea`
@@ -65,7 +66,6 @@ const TextArea = styled.textarea`
   border-radius: 8px;
   outline: none;
   font-size: large;
-  width: 100%;
   min-height: 120px;
   resize: vertical;
 `;

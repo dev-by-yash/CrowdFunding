@@ -6,12 +6,13 @@ const light = {
     bgSubDiv: '#efe7fd'
 }
 const dark = {
-    color: '#fff',
-    bgColor: '#923cb5',
-    bgImage: 'linear-gradient(180deg, #2f0f3d 5%, #000000 90%)',
-    bgDiv: 'black',
-    bgSubDiv: 'rgb(33, 36, 41)'
-}
+  color: '#ffffff', // white text
+  bgColor: '#0e1117', // deep navy (background)
+  bgImage: 'linear-gradient(180deg, #0e1117 0%, #1a1f2c 100%)', // smooth dark blue to slate gradient
+  bgDiv: '#161b22', // card-like surfaces
+  bgSubDiv: '#21262d' // lighter dark for sub-sections
+};
+
 
 const themes = {
     light: light,

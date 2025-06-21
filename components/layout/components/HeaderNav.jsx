@@ -9,54 +9,46 @@ const HeaderNav = () => {
 
   return (
     <HeaderNavWrapper>
-      <Link href="/" passHref>
-        <HeaderNavLinks active={pathname === '/'}>
-          Campaigns
-        </HeaderNavLinks>
-      </Link>
-      <Link href="/createcampaign" passHref>
-        <HeaderNavLinks active={pathname === '/createcampaign'}>
-          Create Campaign
-        </HeaderNavLinks>
-      </Link>
-      <Link href="/dashboard" passHref>
-        <HeaderNavLinks active={pathname === '/dashboard'}>
-          Dashboard
-        </HeaderNavLinks>
-      </Link>
+      <NavItem href="/" $active={pathname === '/'}>Campaigns</NavItem>
+      <NavItem href="/createcampaign" $active={pathname === '/createcampaign'}>Create Campaign</NavItem>
+      <NavItem href="/dashboard" $active={pathname === '/dashboard'}>Dashboard</NavItem>
     </HeaderNavWrapper>
   );
 };
 
 const HeaderNavWrapper = styled.div`
   display: flex;
+  gap: 12px;
   align-items: center;
-  justify-content: space-between;
+  justify-content: center;
   background-color: ${(props) => props.theme.bgDiv};
-  padding: 6px;
-  height: 50%;
-  border-radius: 10px;
+  padding: 8px 16px;
+  border-radius: 12px;
+  flex-wrap: wrap;
+
+  @media (max-width: 768px) {
+    flex-direction: column;
+  }
 `;
 
-const HeaderNavLinks = styled.div.withConfig({
-  shouldForwardProp: (prop) => prop !== 'active',
-})`
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  background-color: ${(props) =>
-    props.active ? props.theme.bgSubDiv : props.theme.bgDiv};
-  height: 100%;
-  font-family: 'Roboto';
-  margin: 5px;
+const NavItem = styled(Link)`
+  padding: 8px 14px;
   border-radius: 10px;
-  padding: 0 5px;
-  cursor: pointer;
-  text-transform: uppercase;
-  font-weight: bold;
-  font-size: small;
+  background-color: ${(props) =>
+    props.$active ? props.theme.bgSubDiv : 'transparent'};
+  color: ${(props) =>
+    props.$active ? props.theme.color : props.theme.textColor};
   text-decoration: none;
-  color: ${(props) => (props.active ? props.theme.color : props.theme.textColor)};
+  font-weight: 600;
+  font-size: 14px;
+  text-transform: uppercase;
+  transition: all 0.3s ease;
+
+  &:hover {
+    background-color: ${(props) => props.theme.bgSubDiv};
+    color: ${(props) => props.theme.color};
+    transform: scale(1.05);
+  }
 `;
 
 export default HeaderNav;

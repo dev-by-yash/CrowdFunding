@@ -3,7 +3,7 @@
 import styled from 'styled-components';
 import FormLeftWrapper from './Components/FormLeftWrapper';
 import FormRightWrapper from './Components/FormRightWrapper';
-import { createContext, useState } from 'react';
+import { createContext, useState, useEffect } from 'react';
 import ClipLoader from 'react-spinners/ClipLoader';
 import { ethers } from 'ethers';
 import { toast } from 'react-toastify';
@@ -27,10 +27,7 @@ export const Form = () => {
   const [image, setImage] = useState(null);
 
   const FormHandler = (e) => {
-    setForm({
-      ...form,
-      [e.target.name]: e.target.value,
-    });
+    setForm({ ...form, [e.target.name]: e.target.value });
   };
 
   const ImageHandler = (e) => {
@@ -42,26 +39,25 @@ export const Form = () => {
     const provider = new ethers.providers.Web3Provider(window.ethereum);
     const signer = provider.getSigner();
 
-    if (form.campaignTitle === '') {
-      toast.warn('Title Field Is Empty');
-    } else if (form.story === '') {
-      toast.warn('Story Field Is Empty');
-    } else if (form.requiredAmount === '') {
-      toast.warn('Required Amount Field Is Empty');
-    } else if (uploaded === false) {
-      toast.warn('Files Upload Required');
-    } else {
-      setLoading(true);
+    if (form.campaignTitle === '' || form.story === '' || form.requiredAmount === '' || !uploaded) {
+      toast.warn('Please fill all fields and upload files');
+      return;
+    }
 
-      const contract = new ethers.Contract(
-        process.env.NEXT_PUBLIC_ADDRESS,
-        CampaignFactory.abi,
-        signer
-      );
+    setLoading(true);
+    try {
+      const contractAddress = process.env.NEXT_PUBLIC_ADDRESS;
 
+      if (!contractAddress || !ethers.utils.isAddress(contractAddress)) {
+        toast.error('Invalid or missing contract address');
+        setLoading(false);
+        return;
+      }
+
+      const contract = new ethers.Contract(contractAddress, CampaignFactory.abi, signer);
       const CampaignAmount = ethers.utils.parseEther(form.requiredAmount);
 
-      const campaignData = await contract.createCampaign(
+      const tx = await contract.createCampaign(
         form.campaignTitle,
         CampaignAmount,
         imageUrl,
@@ -69,11 +65,28 @@ export const Form = () => {
         storyUrl
       );
 
-      await campaignData.wait();
+      toast.info('⏳ Waiting for confirmation...');
+      const receipt = await tx.wait();
+      const event = receipt.events?.find((e) => e.event === 'campaignCreated');
+      const campaignAddr = event?.args?.campaignAddress || event?.args?.[3];
 
-      setAddress(campaignData.to);
+      if (campaignAddr) {
+        setAddress(campaignAddr);
+        toast.success('🎉 Campaign Created Successfully!');
+      } else {
+        toast.error('Campaign creation event not found');
+      }
+    } catch (err) {
+      console.error(err);
+      toast.error(err.code === 4001 ? 'Transaction Rejected' : 'Something went wrong');
+    } finally {
+      setLoading(false);
     }
   };
+
+  useEffect(() => {
+    if (address) setLoading(false);
+  }, [address]);
 
   return (
     <FormState.Provider
@@ -93,17 +106,15 @@ export const Form = () => {
       <FormWrapper>
         <FormMain>
           {loading ? (
-            address === '' ? (
-              <Spinner>
-                <ClipLoader size={60} color="#00b712" />
-              </Spinner>
-            ) : (
-              <Address>
-                <h1>Campaign Started Successfully!</h1>
-                <h1>{address}</h1>
-                <Button>Go To Campaign</Button>
-              </Address>
-            )
+            <Spinner><ClipLoader size={60} color="#00b712" /></Spinner>
+          ) : address !== '' ? (
+            <Address>
+              <h1>Campaign Started!</h1>
+              <h1>{address}</h1>
+              <Button onClick={() => window.open(`https://etherscan.io/address/${address}`, '_blank')}>
+                Go To Campaign
+              </Button>
+            </Address>
           ) : (
             <FormInputsWrapper>
               <FormLeftWrapper />
@@ -129,7 +140,13 @@ const FormMain = styled.div`
 const FormInputsWrapper = styled.div`
   display: flex;
   justify-content: space-between;
+  flex-wrap: wrap;
   margin-top: 45px;
+  gap: 20px;
+
+  @media (max-width: 768px) {
+    flex-direction: column;
+  }
 `;
 
 const Spinner = styled.div`
@@ -148,12 +165,11 @@ const Address = styled.div`
   align-items: center;
   background-color: ${(props) => props.theme.bgSubDiv};
   border-radius: 8px;
+  justify-content: center;
 `;
 
 const Button = styled.button`
-  display: flex;
-  justify-content: center;
-  width: 30%;
+  width: 50%;
   padding: 15px;
   color: white;
   background-color: #00b712;

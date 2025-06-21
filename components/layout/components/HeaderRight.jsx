@@ -18,25 +18,33 @@ const HeaderRight = () => {
   );
 };
 
-// same styled components...
-
 const HeaderRightWrapper = styled.div`
   display: flex;
-  justify-content: center;
   align-items: center;
+  gap: 12px;
   margin-right: 16px;
-  height: 50%;
-`
+`;
+
 const ThemeToggle = styled.div`
   display: flex;
   justify-content: center;
   align-items: center;
   background-color: ${(props) => props.theme.bgDiv};
-  height: 100%;
-  padding: 5px;
-  width: 45px;
-  border-radius: 12px;
+  padding: 6px;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
   cursor: pointer;
-`
+  transition: background-color 0.3s ease, transform 0.2s ease;
 
-export default HeaderRight
+  &:hover {
+    background-color: ${(props) => props.theme.bgSubDiv};
+    transform: scale(1.1);
+  }
+
+  svg {
+    color: ${(props) => props.theme.color};
+  }
+`;
+
+export default HeaderRight;

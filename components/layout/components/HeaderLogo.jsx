@@ -2,17 +2,28 @@ import styled from 'styled-components';
 
 const HeaderLogo = () => {
   return (
-    <Logo>The Saviour</Logo>
-  )
-}
+    <Logo>
+      Fund<span>Fusion</span>
+    </Logo>
+  );
+};
 
 const Logo = styled.h1`
-  font-weight: normal;
-  font-size: 40px;
-  margin-left: 11px;
-  font-family: 'Praise';
-  letter-spacing: 3px;
+  font-weight: bold;
+  font-size: 36px;
+  margin-left: 16px;
+  font-family: 'Praise', cursive;
+  letter-spacing: 2px;
   cursor: pointer;
-`
+  color: ${(props) => props.theme.color};
 
-export default HeaderLogo
+  span {
+    color: #3ddc97; /* Accent color */
+  }
+
+  @media (max-width: 480px) {
+    font-size: 28px;
+  }
+`;
+
+export default HeaderLogo;
