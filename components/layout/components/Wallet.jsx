@@ -141,34 +141,41 @@ const Wallet = () => {
 
       const network = await provider.getNetwork();
 
-      if (network.chainId !== 31337) {
-        try {
-          await window.ethereum.request({
-            method: "wallet_addEthereumChain",
-            params: [
-              {
-                chainId: "0x7A69", // 31337 in hex
-                chainName: "Hardhat Localhost",
-                rpcUrls: ["http://127.0.0.1:8545"],
-                nativeCurrency: {
-                  name: "ETH",
-                  symbol: "ETH",
-                  decimals: 18,
-                },
-                blockExplorerUrls: [],
+    if (network.chainId !== 11155111) {
+  try {
+    await window.ethereum.request({
+      method: "wallet_switchEthereumChain",
+      params: [{ chainId: "0xaa36a7" }],
+    });
+  } catch (switchError) {
+    // If the chain is not added, then add it
+    if (switchError.code === 4902) {
+      try {
+        await window.ethereum.request({
+          method: "wallet_addEthereumChain",
+          params: [
+            {
+              chainId: "0xaa36a7",
+              chainName: "Sepolia Testnet",
+              rpcUrls: ["https://eth-sepolia.g.alchemy.com/v2/YOUR_ALCHEMY_KEY"],
+              nativeCurrency: {
+                name: "Ethereum",
+                symbol: "ETH",
+                decimals: 18,
               },
-            ],
-          });
-
-          await window.ethereum.request({
-            method: "wallet_switchEthereumChain",
-            params: [{ chainId: "0x7A69" }],
-          });
-        } catch (error) {
-          console.error("Failed to add or switch to Hardhat network", error);
-          return;
-        }
+              blockExplorerUrls: ["https://sepolia.etherscan.io"],
+            },
+          ],
+        });
+      } catch (addError) {
+        console.error("Failed to add Sepolia network", addError);
       }
+    } else {
+      console.error("Failed to switch to Sepolia network", switchError);
+    }
+  }
+}
+
 
       const signer = provider.getSigner();
       const addr = await signer.getAddress();

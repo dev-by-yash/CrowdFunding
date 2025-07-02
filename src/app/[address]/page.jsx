@@ -12,10 +12,27 @@ export default function Detail() {
   const [donationsData, setDonationsData] = useState([]);
   const [mydonations, setMydonations] = useState([]);
   const [story, setStory] = useState('');
-  const [amount, setAmount] = useState(''); // ✅ FIXED
+  const [amount, setAmount] = useState('');
   const [change, setChange] = useState(false);
 
   const { address } = useParams();
+
+  // 🧠 Helper to paginate event log queries (max 500 block range)
+  const queryFilterWithPagination = async (contract, filter, startBlock, endBlock, chunkSize = 500) => {
+    let logs = [];
+
+    for (let from = startBlock; from <= endBlock; from += chunkSize) {
+      const to = Math.min(from + chunkSize - 1, endBlock);
+      try {
+        const chunkLogs = await contract.queryFilter(filter, from, to);
+        logs = logs.concat(chunkLogs);
+      } catch (err) {
+        console.error(`Error fetching logs from ${from} to ${to}:`, err);
+      }
+    }
+
+    return logs;
+  };
 
   useEffect(() => {
     const Request = async () => {
@@ -38,8 +55,14 @@ export default function Detail() {
         .then(res => res.text())
         .then(data => setStory(data));
 
-      const Donations = contract.filters.donated();
-      const AllDonations = await contract.queryFilter(Donations);
+      const latestBlock = await provider.getBlockNumber();
+      const deploymentBlock = 8663005; // Update with actual deployment block if needed
+
+      const donationFilter = contract.filters.donated();
+      const userDonationFilter = contract.filters.donated(userAddress);
+
+      const allDonations = await queryFilterWithPagination(contract, donationFilter, deploymentBlock, latestBlock);
+      const userDonations = await queryFilterWithPagination(contract, userDonationFilter, deploymentBlock, latestBlock);
 
       setData({
         address,
@@ -51,16 +74,13 @@ export default function Detail() {
         owner
       });
 
-      setDonationsData(AllDonations.map((e) => ({
+      setDonationsData(allDonations.map((e) => ({
         donar: e.args.donar,
         amount: ethers.utils.formatEther(e.args.amount),
         timestamp: parseInt(e.args.timestamp)
       })));
 
-      const myDonationsFilter = contract.filters.donated(userAddress);
-      const MyAllDonations = await contract.queryFilter(myDonationsFilter);
-
-      setMydonations(MyAllDonations.map((e) => ({
+      setMydonations(userDonations.map((e) => ({
         donar: e.args.donar,
         amount: ethers.utils.formatEther(e.args.amount),
         timestamp: parseInt(e.args.timestamp)
@@ -98,7 +118,7 @@ export default function Detail() {
           <Image
             alt="crowdfunding dapp"
             layout="fill"
-            src={`https://gateway.pinata.cloud/ipfs/${data.image}`} // ✅ Pinata gateway
+            src={`https://gateway.pinata.cloud/ipfs/${data.image}`}
             objectFit="cover"
           />
         </ImageSection>

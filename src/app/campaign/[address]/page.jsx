@@ -12,67 +12,83 @@ export default function Detail() {
   const [donationsData, setDonationsData] = useState([]);
   const [mydonations, setMydonations] = useState([]);
   const [story, setStory] = useState('');
-  const [amount, setAmount] = useState();
+  const [amount, setAmount] = useState('');
   const [change, setChange] = useState(false);
 
-  const { address } = useParams();
+  const params = useParams();
+  const address = Array.isArray(params.address) ? params.address[0] : params.address;
+
+  async function queryFilterWithPagination(contract, filter, startBlock, endBlock, chunkSize = 500) {
+    const logs = [];
+    for (let i = startBlock; i <= endBlock; i += chunkSize + 1) {
+      const from = i;
+      const to = Math.min(i + chunkSize, endBlock);
+      const chunkLogs = await contract.queryFilter(filter, from, to);
+      logs.push(...chunkLogs);
+    }
+    return logs;
+  }
 
   useEffect(() => {
-    const Request = async () => {
-      let storyData;
+    const fetchData = async () => {
+      try {
+        if (!ethers.utils.isAddress(address)) {
+          console.error("Invalid address");
+          return;
+        }
 
-      await window.ethereum.request({ method: 'eth_requestAccounts' });
-      const Web3provider = new ethers.providers.Web3Provider(window.ethereum);
-      const signer = Web3provider.getSigner();
-      const userAddress = await signer.getAddress();
+        await window.ethereum.request({ method: 'eth_requestAccounts' });
+        const Web3provider = new ethers.providers.Web3Provider(window.ethereum);
+        const signer = Web3provider.getSigner();
+        const userAddress = await signer.getAddress();
 
-      const provider = new ethers.providers.JsonRpcProvider(process.env.NEXT_PUBLIC_RPC_URL);
-      const contract = new ethers.Contract(address, Campaign.abi, provider);
+        const provider = new ethers.providers.JsonRpcProvider(process.env.NEXT_PUBLIC_RPC_URL);
+        const contract = new ethers.Contract(address, Campaign.abi, provider);
 
-      const title = await contract.title();
-      const requiredAmount = await contract.requiredAmount();
-      const image = await contract.image();
-      const storyUrl = await contract.story();
-      const owner = await contract.owner();
-      const receivedAmount = await contract.receivedAmount();
+        const title = await contract.title();
+        const requiredAmount = await contract.requiredAmount();
+        const image = await contract.image();
+        const storyUrl = await contract.story();
+        const owner = await contract.owner();
+        const receivedAmount = await contract.receivedAmount();
 
-      fetch('https://crowdfunding.infura-ipfs.io/ipfs/' + storyUrl)
-        .then(res => res.text())
-        .then(data => setStory(data));
+        fetch('https://crowdfunding.infura-ipfs.io/ipfs/' + storyUrl)
+          .then(res => res.text())
+          .then(data => setStory(data));
 
-      const Donations = contract.filters.donated();
-      const AllDonations = await contract.queryFilter(Donations);
+        const latestBlock = await provider.getBlockNumber();
+        const startBlock = latestBlock - 2000;
 
-      setData({
-        address,
-        title,
-        requiredAmount: ethers.utils.formatEther(requiredAmount),
-        image,
-        receivedAmount: ethers.utils.formatEther(receivedAmount),
-        storyUrl,
-        owner
-      });
+        const donations = await queryFilterWithPagination(contract, contract.filters.donated(), startBlock, latestBlock);
+        const myDonations = await queryFilterWithPagination(contract, contract.filters.donated(userAddress), startBlock, latestBlock);
 
-      setDonationsData(AllDonations.map((e) => ({
-        donar: e.args.donar,
-        amount: ethers.utils.formatEther(e.args.amount),
-        timestamp: parseInt(e.args.timestamp)
-      })));
+        setData({
+          address,
+          title,
+          requiredAmount: ethers.utils.formatEther(requiredAmount),
+          image,
+          receivedAmount: ethers.utils.formatEther(receivedAmount),
+          storyUrl,
+          owner
+        });
 
-      const myDonationsFilter = contract.filters.donated(userAddress);
-      const MyAllDonations = await contract.queryFilter(myDonationsFilter);
+        setDonationsData(donations.map(e => ({
+          donar: e.args.donar,
+          amount: ethers.utils.formatEther(e.args.amount),
+          timestamp: parseInt(e.args.timestamp)
+        })));
 
-      setMydonations(MyAllDonations.map((e) => ({
-        donar: e.args.donar,
-        amount: ethers.utils.formatEther(e.args.amount),
-        timestamp: parseInt(e.args.timestamp)
-      })));
-    }
+        setMydonations(myDonations.map(e => ({
+          donar: e.args.donar,
+          amount: ethers.utils.formatEther(e.args.amount),
+          timestamp: parseInt(e.args.timestamp)
+        })));
+      } catch (error) {
+        console.error("Error fetching campaign details:", error);
+      }
+    };
 
-    if (address) {
-      Request();
-    }
-
+    if (address) fetchData();
   }, [change, address]);
 
   const DonateFunds = async () => {
@@ -88,7 +104,7 @@ export default function Detail() {
       setChange(!change);
       setAmount('');
     } catch (error) {
-      console.log(error);
+      console.error("Donation failed:", error);
     }
   };
 
@@ -101,7 +117,7 @@ export default function Detail() {
           <Image
             alt="crowdfunding dapp"
             layout="fill"
-            src={"https://crowdfunding.infura-ipfs.io/ipfs/" + data.image}
+            src={`https://crowdfunding.infura-ipfs.io/ipfs/${data.image}`}
           />
         </ImageSection>
         <Text>{story}</Text>
@@ -109,7 +125,12 @@ export default function Detail() {
       <RightContainer>
         <Title>{data.title}</Title>
         <DonateSection>
-          <Input value={amount} onChange={(e) => setAmount(e.target.value)} type="number" placeholder="Enter Amount To Donate" />
+          <Input
+            value={amount}
+            onChange={(e) => setAmount(e.target.value)}
+            type="number"
+            placeholder="Enter Amount To Donate"
+          />
           <Donate onClick={DonateFunds}>Donate</Donate>
         </DonateSection>
         <FundsData>
@@ -127,7 +148,7 @@ export default function Detail() {
             <DonationTitle>Recent Donations</DonationTitle>
             {donationsData.map((e) => (
               <Donation key={e.timestamp}>
-                <DonationData>{e.donar.slice(0, 6)}...{e.donar.slice(39)}</DonationData>
+                <DonationData>{e.donar.slice(0, 6)}...{e.donar.slice(-4)}</DonationData>
                 <DonationData>{e.amount} Matic</DonationData>
                 <DonationData>{new Date(e.timestamp * 1000).toLocaleString()}</DonationData>
               </Donation>
@@ -137,7 +158,7 @@ export default function Detail() {
             <DonationTitle>My Past Donations</DonationTitle>
             {mydonations.map((e) => (
               <Donation key={e.timestamp}>
-                <DonationData>{e.donar.slice(0, 6)}...{e.donar.slice(39)}</DonationData>
+                <DonationData>{e.donar.slice(0, 6)}...{e.donar.slice(-4)}</DonationData>
                 <DonationData>{e.amount} Matic</DonationData>
                 <DonationData>{new Date(e.timestamp * 1000).toLocaleString()}</DonationData>
               </Donation>
@@ -149,6 +170,7 @@ export default function Detail() {
   );
 }
 
+// Styled Components
 const DetailWrapper = styled.div`
   display: flex;
   justify-content: space-between;
@@ -173,8 +195,6 @@ const Text = styled.p`
   text-align: justify;
 `;
 const Title = styled.h1`
-  padding: 0;
-  margin: 0;
   font-family: "Poppins";
   font-size: x-large;
   color: ${(props) => props.theme.color};
@@ -198,8 +218,6 @@ const Input = styled.input`
   height: 40px;
 `;
 const Donate = styled.button`
-  display: flex;
-  justify-content: center;
   width: 40%;
   padding: 15px;
   color: white;
@@ -212,10 +230,10 @@ const Donate = styled.button`
   font-size: large;
 `;
 const FundsData = styled.div`
-  width: 100%;
   display: flex;
   justify-content: space-between;
   margin-top: 10px;
+  width: 100%;
 `;
 const Funds = styled.div`
   width: 45%;
@@ -226,9 +244,7 @@ const Funds = styled.div`
 `;
 const FundText = styled.p`
   margin: 2px;
-  padding: 0;
   font-family: "Poppins";
-  font-size: normal;
 `;
 const Donated = styled.div`
   height: 280px;
@@ -263,5 +279,4 @@ const DonationData = styled.p`
   font-family: "Roboto";
   font-size: large;
   margin: 0;
-  padding: 0;
 `;

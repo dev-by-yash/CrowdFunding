@@ -1,3 +1,4 @@
+
 // import React, { useState, useEffect } from 'react';
 // import styled from 'styled-components';
 // import Image from 'next/image';
@@ -48,18 +49,23 @@
 //     box-shadow: 0 6px 16px rgba(16, 185, 129, 0.3);
 //   }
 // `;
-
 // const CardImage = styled.div`
 //   position: relative;
 //   width: 100%;
 //   height: 180px;
-//   border-bottom: 1px solid #e5e7eb;
 //   overflow: hidden;
+//   display: flex;
+//   align-items: center;
+//   justify-content: center;
+//   background-color: #f9fafb;
 // `;
 
 // const StyledImage = styled(Image)`
-//   object-fit: cover;
+//   object-fit: contain !important;
+//   width: auto !important;
+//   height: 100% !important;
 // `;
+
 
 
 // const CardContent = styled.div`
@@ -130,12 +136,18 @@
 //       <CardsGrid>
 //         {filteredCampaigns.map((campaign, index) => (
 //           <Card key={index}>
-//             <CardImage
-//               src={`https://gateway.pinata.cloud/ipfs/${campaign.image}`}
-//               alt={campaign.title}
-//               width={400}
-//               height={180}
-//             />
+//             <CardImage>
+//               <StyledImage
+//                 src={`https://gateway.pinata.cloud/ipfs/${campaign.image}`}
+//                 alt={campaign.title}
+//                 width={280}
+//                 height={180}
+//                 quality={80}
+//               />
+
+//             </CardImage>
+
+
 //             <CardContent>
 //               <CardTitle>{campaign.title}</CardTitle>
 //               <Info>
@@ -166,6 +178,9 @@
 //     </>
 //   );
 // }
+// components/CampaignsPage.jsx
+'use client';
+
 import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
 import Image from 'next/image';
@@ -216,6 +231,7 @@ const Card = styled.div`
     box-shadow: 0 6px 16px rgba(16, 185, 129, 0.3);
   }
 `;
+
 const CardImage = styled.div`
   position: relative;
   width: 100%;
@@ -232,8 +248,6 @@ const StyledImage = styled(Image)`
   width: auto !important;
   height: 100% !important;
 `;
-
-
 
 const CardContent = styled.div`
   padding: 1rem;
@@ -311,9 +325,7 @@ export default function CampaignsPage({ campaigns }) {
                 height={180}
                 quality={80}
               />
-
             </CardImage>
-
 
             <CardContent>
               <CardTitle>{campaign.title}</CardTitle>
@@ -323,7 +335,7 @@ export default function CampaignsPage({ campaigns }) {
               </Info>
               <Info>
                 <PaidIcon fontSize="small" />
-                {campaign.amount} Matic
+                {campaign.amount} ETH
               </Info>
               <Info>
                 <EventIcon fontSize="small" />
