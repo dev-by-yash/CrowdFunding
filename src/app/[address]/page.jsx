@@ -17,7 +17,7 @@ export default function Detail() {
 
   const { address } = useParams();
 
-  // 🧠 Helper to paginate event log queries (max 500 block range)
+
   const queryFilterWithPagination = async (contract, filter, startBlock, endBlock, chunkSize = 500) => {
     let logs = [];
 
